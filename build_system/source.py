@@ -16,6 +16,10 @@ class SourceFile(object):
         return re.findall(regex, self.path)[0]
 
     @property
+    def objectfile(self):
+        return self.filename.replace(self.extension, 'o')
+
+    @property
     def filename(self):
         return os.path.basename(self.path)
 
