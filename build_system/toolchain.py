@@ -9,6 +9,24 @@ class Toolchain(object):
 
     @property
     def compiler(self):
+        raise NotImplementedError()
+
+    @property
+    def linker(self):
+        raise NotImplementedError()
+
+    @property
+    def assembler(self):
+        raise NotImplementedError()
+
+    @property
+    def language(self):
+        raise NotImplementedError()
+
+
+class CToolchain(Toolchain):
+    @property
+    def compiler(self):
         return self.prefix + 'gcc'
 
     @property
@@ -22,3 +40,13 @@ class Toolchain(object):
     @property
     def language(self):
         return 'c'
+
+
+class CppToolchain(CToolchain):
+    @property
+    def compiler(self):
+        return self.prefix + 'g++'
+
+    @property
+    def language(self):
+        return 'cpp'

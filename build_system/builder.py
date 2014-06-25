@@ -1,12 +1,12 @@
 #!/usr/bin/python2
 
-from toolchain import Toolchain
+from toolchain import CToolchain
 from shell_command import ShellCommand
 import os
 
 
 class Builder(object):
-    def __init__(self, target, toolchain=Toolchain(), sources=[], tmpdir='objs', language='c', includes=[]):
+    def __init__(self, target, toolchain=CToolchain(), sources=[], tmpdir='objs', language='c', includes=[]):
         self.target = target
         self.toolchain = toolchain
         self.sources = sources
@@ -47,7 +47,10 @@ class Builder(object):
 
     def __gen_include_flags(self):
         flags = map(os.path.abspath, self.includes)
-        return ('-I' + ' -I'.join(flags)).split(' ')
+        flags = ' -I'.join(flags)
+        if flags:
+            return ('-I' + flags).split(' ')
+        return []
 
     def compile(self):
         compiler = self.toolchain.compiler
@@ -65,21 +68,6 @@ class Builder(object):
         compiler = self.toolchain.compiler
         target = os.path.join(self.tmpdir, self.target)
         flags = self.objects + self.ldflags + ['-o', target]
-        cmd = ShellCommand(compiler, flags)
-        print cmd.command
-        output = cmd.run()
-        if output:
-            print output
-
-    def compile_link(self):
-        compiler = self.toolchain.compiler
-        target = os.path.join(self.tmpdir, self.target)
-        flags = []
-        for source in self.supported_source:
-            flags += [source.path]
-        flags += ['-o']
-        flags += [target]
-        flags += ['-v']
         cmd = ShellCommand(compiler, flags)
         print cmd.command
         output = cmd.run()
