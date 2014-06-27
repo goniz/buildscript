@@ -8,6 +8,7 @@ class ShellCommand(object):
         if isinstance(flags, str):
             self.flags = [flags]
         self.output = ''
+        self.exit_code = 0
         self.cmd = [cmd]
         self.cmd += flags
         self.process = Popen(self.cmd,
@@ -15,7 +16,7 @@ class ShellCommand(object):
                              stdout=PIPE,
                              stderr=PIPE)
 
-    def run(self, stdin=''):
+    def run(self, stdin='', verbose=False):
         """
 
         :rtype : str
@@ -24,12 +25,18 @@ class ShellCommand(object):
             return self.output
 
         stdout, stderr = self.process.communicate(stdin)
-        if 0 != self.process.returncode:
+        self.exit_code = self.process.returncode
+        if 0 != self.exit_code:
             self.output = stderr
             raise ValueError(stderr)
         else:
             self.output = stdout
-        return self.output
+
+        if verbose:
+            print self.command
+            if self.output:
+                print self.output
+        return self.exit_code, self.output
 
     @property
     def command(self):

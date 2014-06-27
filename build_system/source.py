@@ -36,7 +36,7 @@ class SourceFile(object):
             return 'Unknown'
 
     def __str__(self):
-        return self.path
+        return self.filename
 
     def __repr__(self):
         return str(self)

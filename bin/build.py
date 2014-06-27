@@ -8,7 +8,8 @@ import sys
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-f', '--file', required=False, default='buildscript.py')
+    parser.add_argument('-f', '--file', required=False, type=str, default='buildscript.py')
+    parser.add_argument('-j', '--jobs', required=False, type=int, default=1)
     options = parser.parse_args()
 
     if not os.path.exists(options.file):
@@ -16,7 +17,7 @@ def main():
         return 1
 
     buildscript = imp.load_source('buildscript', options.file)
-    buildscript.main()
+    buildscript.builder.build(jobs=options.jobs)
     os.unlink(options.file + 'c')
     return 0
 
