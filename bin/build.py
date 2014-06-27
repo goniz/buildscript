@@ -10,6 +10,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--file', required=False, type=str, default='buildscript.py')
     parser.add_argument('-j', '--jobs', required=False, type=int, default=1)
+    parser.add_argument('-v', '--verbose', required=False, action='store_true', default=False)
     options = parser.parse_args()
 
     if not os.path.exists(options.file):
@@ -17,6 +18,7 @@ def main():
         return 1
 
     buildscript = imp.load_source('buildscript', options.file)
+    buildscript.builder.verbose = options.verbose
     buildscript.builder.build(jobs=options.jobs)
     os.unlink(options.file + 'c')
     return 0

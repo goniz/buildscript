@@ -7,8 +7,6 @@ import re
 class SourceFile(object):
     def __init__(self, path):
         self.path = path
-        if not os.path.isabs(self.path):
-            self.path = os.path.abspath(self.path)
 
     @property
     def extension(self):
@@ -45,8 +43,6 @@ class SourceFile(object):
 class SourceDirectory(object):
     def __init__(self, path, exts=[]):
         self.path = path
-        if not os.path.isabs(self.path):
-            self.path = os.path.abspath(self.path)
         if isinstance(exts, str):
             self.extensions = [exts]
         elif not isinstance(exts, list):

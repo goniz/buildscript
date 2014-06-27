@@ -63,7 +63,7 @@ class ParallelBuilder(Builder):
         flags = self._gen_include_flags()
         for source in self.supported_source:
             args = (source, flags)
-            res = pool.apply_async(self.compile_object, args=args, callback=self.compile_object_done)
+            pool.apply_async(self.compile_object, args=args, callback=self.compile_object_done)
         pool.close()
         pool.join()
         if self.error['status'] is True:

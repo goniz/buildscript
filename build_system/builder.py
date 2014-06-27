@@ -16,6 +16,7 @@ class Builder(object):
         self.objects = []
         self.cflags = []
         self.ldflags = []
+        self.verbose = False
         self.tmpdir = tmpdir
         if not os.path.exists(self.tmpdir):
             os.makedirs(self.tmpdir, 0755)
@@ -69,9 +70,9 @@ class Builder(object):
         obj = os.path.join(self.tmpdir, source.objectfile)
         flags = [source.path, '-c'] + flags + self.cflags + ['-o', obj]
         cmd = ShellCommand(compiler, flags)
-        print ' [CC]  %-20s\t-->\t%s' % (source.filename, source.objectfile)
+        print '[CC]  %-20s\t-->\t%s' % (source.filename, source.objectfile)
         try:
-            cmd.run(verbose=False)
+            cmd.run(verbose=self.verbose)
             self.objects += [obj]
             return source, True
         except ValueError as e:
@@ -91,8 +92,9 @@ class Builder(object):
         target = os.path.join(self.tmpdir, self.target)
         flags = self.objects + self.ldflags + ['-o', target]
         cmd = ShellCommand(compiler, flags)
+        print '[LD]  %-20s\t' % (target, )
         try:
-            cmd.run(verbose=True)
+            cmd.run(verbose=self.verbose)
             return True
         except ValueError as e:
             print e
