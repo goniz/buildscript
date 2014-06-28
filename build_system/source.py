@@ -41,14 +41,14 @@ class SourceFile(object):
 
 
 class SourceDirectory(object):
-    def __init__(self, path, exts=[]):
+    def __init__(self, path, exts=None):
         self.path = path
         if isinstance(exts, str):
             self.extensions = [exts]
         elif not isinstance(exts, list):
             raise TypeError('exts should be a list of strings! got %s' % (exts, ))
         else:
-            self.extensions = exts
+            self.extensions = [] if exts is None else exts
 
     def add_extension(self, ext):
         if not ext in self.extensions:

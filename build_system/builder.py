@@ -1,110 +1,85 @@
 #!/usr/bin/python2
 
 from toolchain import CToolchain
-from shell_command import ShellCommand
-from source import SourceFile
 from build_exceptions import BuildError
+from datetime import datetime, timedelta
 import os
 
 
 class Builder(object):
-    def __init__(self, target, toolchain=CToolchain(), tmpdir='objs', language='c', sources=[], includes=[]):
-        self.target = target
+    def __init__(self, targets=None, toolchain=CToolchain(), tmpdir='objs', language='c'):
+        self.targets = [] if targets is None else targets
         self.toolchain = toolchain
-        self.sources = sources
         self.language = language
-        self.objects = []
-        self.cflags = []
-        self.ldflags = []
         self.verbose = False
         self.tmpdir = tmpdir
+        self.prebuild = []
+        self.postbuild = []
+        self.prefinal = []
+        self.statistics = {'externals': timedelta(0), 'compile': timedelta(0)}
         if not os.path.exists(self.tmpdir):
             os.makedirs(self.tmpdir, 0755)
 
-        if isinstance(includes, str):
-            self.includes = [includes]
-        elif isinstance(includes, list):
-            self.includes = includes
-        else:
-            raise ValueError(str(includes))
+    @staticmethod
+    def print_msg(tag, msg):
+        print '[%s]  %s' % (tag, msg)
 
-    def add_source(self, source):
-        if not isinstance(source, SourceFile):
-            return
-        if not source in self.sources:
-            self.sources.append(source)
-
-    def add_sources(self, sources):
-        for source in sources:
-            self.add_source(source)
-
-    @property
-    def supported_source(self):
-        return filter(lambda x: self.toolchain.language == x.language, self.sources)
-
-    def add_cflag(self, flag):
-        if not flag in self.cflags:
-            self.cflags += [flag]
-
-    def remove_cflag(self, flag):
-        if flag in self.cflags:
-            self.cflags.remove(flag)
-
-    def add_ldflag(self, flag):
-        if not flag in self.ldflags:
-            self.ldflags += [flag]
-
-    def remove_ldflag(self, flag):
-        if flag in self.ldflags:
-            self.ldflags.remove(flag)
-
-    def _gen_include_flags(self):
-        flags = map(os.path.abspath, self.includes)
-        flags = ' -I'.join(flags)
-        if flags:
-            return ('-I' + flags).split(' ')
-        return []
-
-    def compile_object(self, source, flags=[]):
-        compiler = self.toolchain.compiler
-        obj = os.path.join(self.tmpdir, source.objectfile)
-        flags = [source.path, '-c'] + flags + self.cflags + ['-o', obj]
-        cmd = ShellCommand(compiler, flags)
-        print '[CC]  %-20s\t-->\t%s' % (source.filename, source.objectfile)
-        try:
-            cmd.run(verbose=self.verbose)
-            self.objects += [obj]
-            return source, True
-        except ValueError as e:
-            print e
-            return source, False
-
-    def compile(self):
-        flags = self._gen_include_flags()
-        for source in self.supported_source:
-            source, ret = self.compile_object(source, flags)
-            if ret is False:
-                raise BuildError(str(source))
+    def compile(self, jobs=1):
+        for target in self.targets:
+            for source in target.sources:
+                source, ret = target.compile_object(self, source)
+                if ret is False:
+                    raise BuildError(str(source))
+            self.run_prefinal(target)
+            target.final(self)
         return True
 
-    def link(self):
-        compiler = self.toolchain.compiler
-        target = os.path.join(self.tmpdir, self.target)
-        flags = self.objects + self.ldflags + ['-o', target]
-        cmd = ShellCommand(compiler, flags)
-        print '[LD]  %-20s\t' % (target, )
-        try:
-            cmd.run(verbose=self.verbose)
-            return True
-        except ValueError as e:
-            print e
-            return False
+    def run_prebuild(self):
+        start = datetime.now()
+        for prebuild in self.prebuild:
+            prebuild(self)
+        end = datetime.now()
+        self.statistics['externals'] += (end - start)
+
+    def run_prefinal(self, target):
+        start = datetime.now()
+        for prefinal in self.prefinal:
+            prefinal(self, target)
+        end = datetime.now()
+        self.statistics['externals'] += (end - start)
+
+    def run_postbuild(self):
+        start = datetime.now()
+        for postbuild in self.postbuild:
+            postbuild(self)
+        end = datetime.now()
+        self.statistics['externals'] += (end - start)
+
+    def _get_execution_time(self, key):
+        delta = self.statistics[key]
+        if 0 == delta.seconds:
+            time = '%d.%06d' % (delta.seconds, delta.microseconds)
+        else:
+            time = delta.total_seconds() + ' sec'
+        return time + ' sec'
+
+    def print_statistics(self):
+        print '\nBuild Statistics:'
+        print '\tCompile time:\t\t%s' % self._get_execution_time('compile')
+        print '\tExternal callbacks:\t%s' % self._get_execution_time('externals')
 
     def build(self, jobs):
+        self.run_prebuild()
+        start = datetime.now()
         try:
-            self.compile()
+            self.compile(jobs)
         except BuildError as e:
             print 'Terminating build due to an error on:'
             print '\t', e
             return
-        self.link()
+        finally:
+            end = datetime.now()
+            self.statistics['compile'] += (end - start)
+
+        self.run_postbuild()
+        self.print_statistics()
