@@ -1,0 +1,7 @@
+
+* target dependencies
+* more standard targets (static lib, dynamic lib etc)
+* parallel dependency builds?
+* build.py -C /path/to/folder that contains a buildscript.py
+* builder.configure() (should check for toolchain existance, libs ..)
+* rewrite Executable().link() function (sane retval, etc..)
