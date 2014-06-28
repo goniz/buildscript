@@ -9,7 +9,7 @@ setup(
     author_email='goni1993@gmail.com',
     packages=['build_system'],
     scripts=['bin/build.py'],
-    url='https://bitbucket.org/goniz/build-system',
+    url='https://github.com/goniz/buildscript',
     description='python-based build system',
     requires=['termcolor']
 )
