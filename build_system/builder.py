@@ -27,6 +27,7 @@ class Builder(object):
     def compile(self, jobs=1):
         for target in self.targets:
             for source in target.sources:
+                self.print_msg('CC', source.filename)
                 source, ret = target.compile_object(self, source)
                 if ret is False:
                     raise BuildError(str(source))
@@ -60,7 +61,7 @@ class Builder(object):
         if 0 == delta.seconds:
             time = '%d.%06d' % (delta.seconds, delta.microseconds)
         else:
-            time = delta.total_seconds() + ' sec'
+            time = str(delta.total_seconds()) + ' sec'
         return time + ' sec'
 
     def print_statistics(self):
@@ -74,8 +75,8 @@ class Builder(object):
         try:
             self.compile(jobs)
         except BuildError as e:
-            print 'Terminating build due to an error on:'
-            print '\t', e
+            print '\nTerminating build due to an error on:'
+            print str(e)
             return
         finally:
             end = datetime.now()

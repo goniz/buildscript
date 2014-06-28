@@ -54,14 +54,10 @@ class Target(object):
         include = self._gen_include_flags()
         flags = [source.path, '-c'] + include + self.cflags + flags + ['-o', obj]
         cmd = ShellCommand(compiler, flags)
-        builder.print_msg('CC', source.filename)
-        try:
-            cmd.run(verbose=builder.verbose)
+        code, output = cmd.run(verbose=builder.verbose)
+        if 0 == code:
             self.objects += [obj]
-            return source, True
-        except ValueError as e:
-            print e
-            return source, False
+        return {'source': source, 'status': (0 == code), 'output': output}
 
     def final(self, builder):
         raise NotImplementedError()
@@ -86,12 +82,10 @@ class Executable(Target):
         flags = self.objects + self.ldflags + ['-o', target]
         cmd = ShellCommand(compiler, flags)
         builder.print_msg('LD', target)
-        try:
-            cmd.run(verbose=builder.verbose)
-            return True
-        except ValueError as e:
-            print e
-            return False
+        code, output = cmd.run(verbose=builder.verbose)
+        print output.strip()
+        return code == 0
+
 
     def final(self, builder):
         self.link(builder)

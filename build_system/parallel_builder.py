@@ -3,7 +3,7 @@
 from builder import Builder
 from toolchain import CToolchain
 from build_exceptions import BuildError
-from multiprocessing import Pool, cpu_count, Manager
+from multiprocessing import Pool, cpu_count, Manager, Queue
 import copy_reg
 import types
 
@@ -27,36 +27,38 @@ def _unpickle_method(func_name, obj, cls):
 
 copy_reg.pickle(types.MethodType, _pickle_method, _unpickle_method)
 
+SINGLE_OBJECT_TIMEOUT = 25
+
 
 class ParallelBuilder(Builder):
     def __init__(self, targets, toolchain=CToolchain(), tmpdir='objs', language='c'):
         super(self.__class__, self).__init__(targets, toolchain, tmpdir, language)
         manager = Manager()
         self.objects = manager.list()
-        self.error = manager.dict()
-        self.error['status'] = False
-        self.error['source'] = None
+        self.results = manager.Queue()
 
     def compile_object_done(self, arg):
         if arg is None:
             return
-        source, ret = arg
-        if ret is False:
-            self.error['status'] = True
-            self.error['source'] = source
+        self.results.put_nowait(arg)
 
     def compile_object(self, target, source, flags=None):
-        if self.error['status'] is True:
-            return
         return target.compile_object(self, source, flags)
+
+    def _wait_for_compilation(self, target):
+        count = 0
+        while count < len(target.sources):
+            retval = self.results.get(True, SINGLE_OBJECT_TIMEOUT)
+            self.print_msg('CC', retval['source'].filename)
+            count += 1
+            if retval['status'] is False:
+                raise BuildError(retval['output'])
 
     def compile(self, jobs=0):
         if 0 == jobs:
             jobs = cpu_count()
 
         self.print_msg('BS', 'Using %d jobs' % (jobs, ))
-        self.error['status'] = False
-        self.error['source'] = None
         for target in self.targets:
             self.print_msg('BS', 'Building target %s' % target.name)
             pool = Pool(processes=jobs)
@@ -64,8 +66,7 @@ class ParallelBuilder(Builder):
                 args = (target, source, None)
                 pool.apply_async(self.compile_object, args=args, callback=self.compile_object_done)
             pool.close()
+            self._wait_for_compilation(target)
             pool.join()
             self.run_prefinal(target)
             target.final(self)
-        if self.error['status'] is True:
-            raise BuildError(str(self.error['source']))

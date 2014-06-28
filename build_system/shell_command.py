@@ -28,14 +28,11 @@ class ShellCommand(object):
         self.exit_code = self.process.returncode
         if 0 != self.exit_code:
             self.output = stderr
-            raise ValueError(stderr)
         else:
             self.output = stdout
 
         if verbose:
             print self.command
-            if self.output:
-                print self.output
         return self.exit_code, self.output
 
     @property
