@@ -34,10 +34,12 @@ class Builder(object):
 
     def compile(self, jobs=1):
         for target in self.targets:
+            self.print_msg('BS', 'Building target %s' % colored(target.name, 'yellow'))
             for source in target.sources:
-                self.print_msg('CC', source.filename)
                 retval = target.compile_object(self, source)
-                if retval['status'] is False:
+                if retval['status'] == 'success':
+                    self.print_msg('CC', source.filename)
+                if retval['status'] == 'failed':
                     raise BuildError(retval['output'])
             self.run_prefinal(target)
             target.final(self)

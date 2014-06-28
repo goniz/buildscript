@@ -19,7 +19,6 @@ def main():
         print 'buildscript.py not found'
         return 1
 
-    print options
     buildscript = imp.load_source('buildscript', options.file)
     buildscript.builder.verbose = options.verbose
     if 'clean' in options.action:
@@ -27,6 +26,9 @@ def main():
     if 'configure' in options.action:
         buildscript.builder.configure()
     if 'build' in options.action:
+        buildscript.builder.build(jobs=options.jobs)
+    if 'rebuild' in options.action:
+        buildscript.builder.clean()
         buildscript.builder.build(jobs=options.jobs)
 
     os.unlink(options.file + 'c')

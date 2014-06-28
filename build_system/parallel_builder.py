@@ -50,13 +50,12 @@ class ParallelBuilder(Builder):
         count = 0
         while count < len(target.sources):
             retval = self.results.get(True, SINGLE_OBJECT_TIMEOUT)
-            if retval['status'] is False:
+            if retval['status'] == 'failed':
                 self.print_msg('CC', colored(retval['source'].filename, 'red'))
-            else:
+                raise BuildError(retval['output'])
+            elif retval['status'] == 'success':
                 self.print_msg('CC', retval['source'].filename)
             count += 1
-            if retval['status'] is False:
-                raise BuildError(retval['output'])
 
     def compile(self, jobs=0):
         if 0 == jobs:

@@ -1,5 +1,6 @@
 #!/usr/bin/python2
 
+from build_exceptions import BuildError
 import os
 import re
 
@@ -7,6 +8,18 @@ import re
 class SourceFile(object):
     def __init__(self, path):
         self.path = path
+
+    def is_newer(self, objfile):
+        if os.path.exists(objfile) is False:
+            return True
+        if os.path.exists(self.path) is False:
+            raise BuildError('SourceFile.path does not exists??')
+
+        obj = os.stat(objfile).st_ctime
+        me = os.stat(self.path).st_ctime
+        if me > obj:
+            return True
+        return False
 
     @property
     def extension(self):

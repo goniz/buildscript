@@ -1,7 +1,7 @@
 #!/usr/bin/python2
 
-from source import SourceFile
 from shell_command import ShellCommand
+from source import SourceFile
 from multiprocessing import Manager
 import os
 
@@ -11,6 +11,7 @@ class Target(object):
         self.name = name
         self.sources = [] if sources is None else sources
         self.cflags = []
+        self.ldflags = []
         manager = Manager()
         self.objects = manager.list()
         if isinstance(includes, str):
@@ -22,15 +23,13 @@ class Target(object):
         else:
             raise ValueError(str(includes))
 
-    def add_source(self, source):
-        if not isinstance(source, SourceFile):
-            return
-        if not source in self.sources:
-            self.sources.append(source)
+    def add_ldflag(self, flag):
+        if not flag in self.ldflags:
+            self.ldflags += [flag]
 
-    def add_sources(self, sources):
-        for source in sources:
-            self.add_source(source)
+    def remove_ldflag(self, flag):
+        if flag in self.ldflags:
+            self.ldflags.remove(flag)
 
     def add_cflag(self, flag):
         if not flag in self.cflags:
@@ -50,33 +49,28 @@ class Target(object):
     def compile_object(self, builder, source, flags=None):
         compiler = builder.toolchain.compiler
         obj = os.path.join(builder.tmpdir, source.objectfile)
+        if source.is_newer(obj) is False:
+            return {'source': source, 'status': 'skipped'}
         flags = [] if flags is None else flags
         include = self._gen_include_flags()
         flags = [source.path, '-c'] + include + self.cflags + flags + ['-o', obj]
         cmd = ShellCommand(compiler, flags)
         code, output = cmd.run(verbose=builder.verbose)
         if 0 == code:
+            status = 'success'
             self.objects += [obj]
-        return {'source': source, 'status': (0 == code), 'output': output}
+        else:
+            status = 'failed'
+        return {'source': source, 'status': status, 'output': output}
 
     def final(self, builder):
         raise NotImplementedError()
 
 
 class Executable(Target):
-    def __init__(self, name, sources=None, includes=None):
-        super(self.__class__, self).__init__(name, sources, includes)
-        self.ldflags = []
-
-    def add_ldflag(self, flag):
-        if not flag in self.ldflags:
-            self.ldflags += [flag]
-
-    def remove_ldflag(self, flag):
-        if flag in self.ldflags:
-            self.ldflags.remove(flag)
-
     def link(self, builder):
+        if len(self.objects) == 0:
+            return False
         compiler = builder.toolchain.compiler
         target = os.path.join(builder.tmpdir, self.name)
         flags = self.objects + self.ldflags + ['-o', target]
@@ -85,7 +79,6 @@ class Executable(Target):
         code, output = cmd.run(verbose=builder.verbose)
         print output.strip()
         return code == 0
-
 
     def final(self, builder):
         self.link(builder)
