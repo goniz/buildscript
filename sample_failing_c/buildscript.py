@@ -2,6 +2,7 @@
 
 from build_system.source import SourceDirectory
 from build_system.parallel_builder import ParallelBuilder
+from build_system.builder import Builder
 from build_system.target import Executable
 
 
@@ -10,4 +11,4 @@ elf = Executable(name='main', sources=sources, includes='include')
 elf.add_cflag('-mtune=generic')
 elf.add_cflag('-march=x86-64')
 
-builder = ParallelBuilder(targets=[elf])
+builder = Builder(targets=[elf])

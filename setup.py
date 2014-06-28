@@ -11,4 +11,5 @@ setup(
     scripts=['bin/build.py'],
     url='https://bitbucket.org/goniz/build-system',
     description='python-based build system',
+    requires=['termcolor']
 )

@@ -3,7 +3,10 @@
 from toolchain import CToolchain
 from build_exceptions import BuildError
 from datetime import datetime, timedelta
+from termcolor import cprint, colored
 import os
+import sys
+import shutil
 
 
 class Builder(object):
@@ -17,20 +20,25 @@ class Builder(object):
         self.postbuild = []
         self.prefinal = []
         self.statistics = {'externals': timedelta(0), 'compile': timedelta(0)}
-        if not os.path.exists(self.tmpdir):
-            os.makedirs(self.tmpdir, 0755)
+        self.clean(clean=False)
+
+    def print_msg(self, tag, msg, newline=True):
+        tag = colored('[' + tag + ']', 'green')
+        newline = '\n' if newline is True else ''
+        self.print_output('%s  %s%s' % (tag, msg, newline))
 
     @staticmethod
-    def print_msg(tag, msg):
-        print '[%s]  %s' % (tag, msg)
+    def print_output(msg):
+        sys.stdout.write(msg)
+        sys.stdout.flush()
 
     def compile(self, jobs=1):
         for target in self.targets:
             for source in target.sources:
                 self.print_msg('CC', source.filename)
-                source, ret = target.compile_object(self, source)
-                if ret is False:
-                    raise BuildError(str(source))
+                retval = target.compile_object(self, source)
+                if retval['status'] is False:
+                    raise BuildError(retval['output'])
             self.run_prefinal(target)
             target.final(self)
         return True
@@ -56,18 +64,22 @@ class Builder(object):
         end = datetime.now()
         self.statistics['externals'] += (end - start)
 
-    def _get_execution_time(self, key):
-        delta = self.statistics[key]
+    def _get_execution_time(self, key='total'):
+        if 'total' == key:
+            delta = self.statistics['externals'] + self.statistics['compile']
+        else:
+            delta = self.statistics[key]
         if 0 == delta.seconds:
             time = '%d.%06d' % (delta.seconds, delta.microseconds)
         else:
-            time = str(delta.total_seconds()) + ' sec'
+            time = str(delta.total_seconds())
         return time + ' sec'
 
     def print_statistics(self):
-        print '\nBuild Statistics:'
+        print 'Build Statistics:'
         print '\tCompile time:\t\t%s' % self._get_execution_time('compile')
         print '\tExternal callbacks:\t%s' % self._get_execution_time('externals')
+        print '\tTotal time:\t\t%s' % colored(self._get_execution_time(), 'yellow')
 
     def build(self, jobs):
         self.run_prebuild()
@@ -75,8 +87,8 @@ class Builder(object):
         try:
             self.compile(jobs)
         except BuildError as e:
-            print '\nTerminating build due to an error on:'
-            print str(e)
+            cprint('\nTerminating build due to an error on:', 'red')
+            cprint(e, 'red')
             return
         finally:
             end = datetime.now()
@@ -84,3 +96,12 @@ class Builder(object):
 
         self.run_postbuild()
         self.print_statistics()
+
+    def clean(self, clean=True):
+        if clean is True:
+            self.print_msg('BS', 'Cleaning')
+            shutil.rmtree(self.tmpdir)
+        if os.path.exists(self.tmpdir) is False:
+            os.makedirs(self.tmpdir, 0755)
+
+

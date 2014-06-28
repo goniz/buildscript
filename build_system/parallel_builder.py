@@ -3,7 +3,8 @@
 from builder import Builder
 from toolchain import CToolchain
 from build_exceptions import BuildError
-from multiprocessing import Pool, cpu_count, Manager, Queue
+from multiprocessing import Pool, cpu_count, Manager
+from termcolor import colored
 import copy_reg
 import types
 
@@ -49,7 +50,10 @@ class ParallelBuilder(Builder):
         count = 0
         while count < len(target.sources):
             retval = self.results.get(True, SINGLE_OBJECT_TIMEOUT)
-            self.print_msg('CC', retval['source'].filename)
+            if retval['status'] is False:
+                self.print_msg('CC', colored(retval['source'].filename, 'red'))
+            else:
+                self.print_msg('CC', retval['source'].filename)
             count += 1
             if retval['status'] is False:
                 raise BuildError(retval['output'])
@@ -58,9 +62,9 @@ class ParallelBuilder(Builder):
         if 0 == jobs:
             jobs = cpu_count()
 
-        self.print_msg('BS', 'Using %d jobs' % (jobs, ))
+        self.print_msg('BS', 'Using %s parallel job(s)' % colored(str(jobs), 'yellow'))
         for target in self.targets:
-            self.print_msg('BS', 'Building target %s' % target.name)
+            self.print_msg('BS', 'Building target %s' % colored(target.name, 'yellow'))
             pool = Pool(processes=jobs)
             for source in target.sources:
                 args = (target, source, None)
