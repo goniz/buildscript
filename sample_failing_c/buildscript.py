@@ -11,4 +11,4 @@ elf = Executable(name='main', sources=sources, includes='include')
 elf.add_cflag('-mtune=generic')
 elf.add_cflag('-march=x86-64')
 
-builder = Builder(targets=[elf])
+builder = ParallelBuilder(targets=[elf])

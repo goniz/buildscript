@@ -77,8 +77,16 @@ class Builder(object):
             time = str(delta.total_seconds())
         return time + ' sec'
 
+    def output_file(self, target):
+        return os.path.join(self.tmpdir, target.name)
+
     def print_statistics(self):
-        print 'Build Statistics:'
+        print '\nBuild Statistics:'
+        for target in self.targets:
+            print '\tTarget: %s' % target.name
+            print '\t\tSource files: %d' % len(target.sources)
+            print '\t\tObject files built: %d' % len(target.compiled_objects)
+            print '\t\tOutput file: %s' % self.output_file(target)
         print '\tCompile time:\t\t%s' % self._get_execution_time('compile')
         print '\tExternal callbacks:\t%s' % self._get_execution_time('externals')
         print '\tTotal time:\t\t%s' % colored(self._get_execution_time(), 'yellow')

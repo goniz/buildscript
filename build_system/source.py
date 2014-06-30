@@ -5,17 +5,17 @@ import os
 import re
 
 
-class SourceFile(object):
+class File(object):
     def __init__(self, path):
         self.path = path
 
-    def is_newer(self, objfile):
-        if os.path.exists(objfile) is False:
+    def is_newer(self, other):
+        if os.path.exists(other) is False:
             return True
         if os.path.exists(self.path) is False:
             raise BuildError('SourceFile.path does not exists??')
 
-        obj = os.stat(objfile).st_ctime
+        obj = os.stat(other).st_ctime
         me = os.stat(self.path).st_ctime
         if me > obj:
             return True
@@ -27,24 +27,8 @@ class SourceFile(object):
         return re.findall(regex, self.path)[0]
 
     @property
-    def objectfile(self):
-        return self.filename.replace(self.extension, 'o')
-
-    @property
     def filename(self):
         return os.path.basename(self.path)
-
-    @property
-    def language(self):
-        ext = self.extension
-        if 'c' == ext:
-            return 'c'
-        elif 'py' == ext:
-            return 'python'
-        elif 'cpp' == ext:
-            return 'cpp'
-        else:
-            return 'Unknown'
 
     def __str__(self):
         return self.filename
@@ -53,7 +37,7 @@ class SourceFile(object):
         return str(self)
 
 
-class SourceDirectory(object):
+class Directory(object):
     def __init__(self, path, exts=None):
         self.path = path
         if isinstance(exts, str):
@@ -70,9 +54,32 @@ class SourceDirectory(object):
     def generate_regex(self):
         return '\.(%s)$' % ('|'.join(self.extensions), )
 
-    def discover(self):
+    def discover(self, output=File):
         regex = self.generate_regex()
         files = os.listdir(self.path)
         files = map(lambda x: os.path.join(self.path, x), files)
         files = filter(lambda x: re.findall(regex, x), files)
-        return map(SourceFile, files)
+        return map(output, files)
+
+
+class SourceFile(File):
+    @property
+    def objectfile(self):
+        return self.filename.replace(self.extension, 'o')
+
+    @property
+    def language(self):
+        ext = self.extension
+        if 'c' == ext:
+            return 'c'
+        elif 'py' == ext:
+            return 'python'
+        elif 'cpp' == ext:
+            return 'cpp'
+        else:
+            return 'Unknown'
+
+
+class SourceDirectory(Directory):
+    def discover(self, output=SourceFile):
+        return super(self.__class__, self).discover(output)

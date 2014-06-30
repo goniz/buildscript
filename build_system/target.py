@@ -1,8 +1,7 @@
 #!/usr/bin/python2
 
 from shell_command import ShellCommand
-from source import SourceFile
-from multiprocessing import Manager
+from source import Directory, File
 import os
 
 
@@ -12,8 +11,7 @@ class Target(object):
         self.sources = [] if sources is None else sources
         self.cflags = []
         self.ldflags = []
-        manager = Manager()
-        self.objects = manager.list()
+        self.compiled_objects = []
         if isinstance(includes, str):
             self.includes = [includes]
         elif isinstance(includes, list):
@@ -58,7 +56,7 @@ class Target(object):
         code, output = cmd.run(verbose=builder.verbose)
         if 0 == code:
             status = 'success'
-            self.objects += [obj]
+            self.compiled_objects += [obj]
         else:
             status = 'failed'
         return {'source': source, 'status': status, 'output': output}
@@ -68,12 +66,19 @@ class Target(object):
 
 
 class Executable(Target):
+    def __init__(self, name, sources=None, includes=None):
+        super(self.__class__, self).__init__(name, sources, includes)
+        self.objects = []
+
+    def gather_objects(self, builder):
+        self.objects += Directory(builder.tmpdir, exts=['o']).discover()
+
     def link(self, builder):
         if len(self.objects) == 0:
             return False
         compiler = builder.toolchain.compiler
-        target = os.path.join(builder.tmpdir, self.name)
-        flags = self.objects + self.ldflags + ['-o', target]
+        target = builder.output_file(self)
+        flags = map(lambda x: x.path, self.objects) + self.ldflags + ['-o', target]
         cmd = ShellCommand(compiler, flags)
         builder.print_msg('LD', target)
         code, output = cmd.run(verbose=builder.verbose)
@@ -81,4 +86,5 @@ class Executable(Target):
         return code == 0
 
     def final(self, builder):
+        self.gather_objects(builder)
         self.link(builder)
